@@ -7,7 +7,6 @@ import {
     Typography,
     Box,
     Button,
-    Grid,
     Card,
     CardContent,
     CardActions,
@@ -16,6 +15,7 @@ import {
     Stack,
     Chip
 } from '@mui/material'
+import Grid from '@mui/material/Grid';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { IconButton } from '@mui/material';
 import { CloudDownload, Delete as DeleteIcon } from '@mui/icons-material'
@@ -174,7 +174,7 @@ function App() {
 
                             <Grid container spacing={3}>
                                 {images.map((img, index) => (
-                                    <Grid item xs={12} sm={6} md={4} key={index}>
+                                    <Grid size={{xs: 12, sm:6, md:4}} key={index}>
                                         <Card sx={{ position: 'relative' }}>
                                             <IconButton
                                                 size="small"
