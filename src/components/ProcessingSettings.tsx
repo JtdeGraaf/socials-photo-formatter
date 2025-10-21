@@ -1,88 +1,102 @@
+
 import React from 'react';
-import type {ProcessingOptions} from '../services/ImageProcessingService';
+import {
+    FormControl,
+    FormControlLabel,
+    Switch,
+    Typography,
+    Box,
+    Paper,
+    TextField,
+    InputAdornment
+} from '@mui/material';
+import { type ProcessingOptions } from '../services/ImageProcessingService';
 
 interface ProcessingSettingsProps {
     settings: ProcessingOptions;
     onSettingsChange: (settings: ProcessingOptions) => void;
-    disabled: boolean;
+    disabled?: boolean;
 }
 
 export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
                                                                           settings,
                                                                           onSettingsChange,
-                                                                          disabled
+                                                                          disabled = false
                                                                       }) => {
-    const handleCompressionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const useCompression = e.target.checked;
+    const handleCompressionToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
         onSettingsChange({
             ...settings,
-            maxFileSizeMB: useCompression ? 8 : undefined
+            maxFileSizeMB: event.target.checked ? 8 : undefined
         });
     };
 
-    const handleMaxSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseFloat(e.target.value);
+    const handleSizeLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(event.target.value);
         onSettingsChange({
             ...settings,
-            maxFileSizeMB: value
+            maxFileSizeMB: !isNaN(value) && value > 0 ? value : undefined
         });
     };
 
-    const handlePreserveSize = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePreserveSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         onSettingsChange({
             ...settings,
-            preserveOriginalSize: e.target.checked
+            preserveOriginalSize: event.target.checked
         });
     };
 
     return (
-        <div className="processing-settings">
-            <h3>Processing Settings</h3>
-            <div className="settings-grid">
-                <div className="setting-group">
-                    <div className="setting-item checkbox">
-                        <label>
-                            <input
-                                type="checkbox"
+        <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+                Processing Settings
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
                                 checked={settings.maxFileSizeMB !== undefined}
-                                onChange={handleCompressionChange}
+                                onChange={handleCompressionToggle}
                                 disabled={disabled}
                             />
-                            Enable Size Limit
-                        </label>
-                    </div>
+                        }
+                        label="Enable compression"
+                    />
 
                     {settings.maxFileSizeMB !== undefined && (
-                        <div className="setting-item size-limit">
-                            <label htmlFor="maxSize">Maximum Size (MB):</label>
-                            <input
-                                type="number"
-                                id="maxSize"
-                                value={settings.maxFileSizeMB}
-                                onChange={handleMaxSizeChange}
-                                min={1}
-                                max={20}
-                                step={0.5}
+                        <TextField
+                            type="number"
+                            size="small"
+                            label="Size limit"
+                            value={settings.maxFileSizeMB}
+                            onChange={handleSizeLimitChange}
+                            disabled={disabled}
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end">MB</InputAdornment>,
+                            }}
+                            inputProps={{
+                                min: 0.1,
+                                step: 0.1
+                            }}
+                            sx={{ width: 150 }}
+                        />
+                    )}
+                </Box>
+
+                <FormControl component="fieldset">
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={settings.preserveOriginalSize}
+                                onChange={handlePreserveSizeChange}
                                 disabled={disabled}
                             />
-                            <small>Instagram limit is 8MB</small>
-                        </div>
-                    )}
-                </div>
-
-                <div className="setting-item checkbox">
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={settings.preserveOriginalSize}
-                            onChange={handlePreserveSize}
-                            disabled={disabled}
-                        />
-                        Keep Original Resolution
-                    </label>
-                    <small>Preserve original image dimensions</small>
-                </div>
-            </div>
-        </div>
+                        }
+                        label="Preserve original image dimensions"
+                    />
+                </FormControl>
+            </Box>
+        </Paper>
     );
 };

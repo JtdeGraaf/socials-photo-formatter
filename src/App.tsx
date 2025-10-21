@@ -1,8 +1,34 @@
 import { useState } from 'react'
-import './App.css'
 import { ImageUploader } from './components/ImageUploader'
 import { ProcessingSettings } from './components/ProcessingSettings'
 import { ImageProcessingService, type ProcessingOptions, type ProcessedImage } from './services/ImageProcessingService'
+import {
+    Container,
+    Typography,
+    Box,
+    Button,
+    Grid,
+    Card,
+    CardContent,
+    CardActions,
+    LinearProgress,
+    Paper,
+    Stack,
+    Chip
+} from '@mui/material'
+import { CloudDownload } from '@mui/icons-material'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
+
+const theme = createTheme({
+    palette: {
+        primary: {
+            main: '#1976d2',
+        },
+        secondary: {
+            main: '#dc004e',
+        },
+    },
+});
 
 function App() {
     const [images, setImages] = useState<{ original: File; processed?: ProcessedImage }[]>([]);
@@ -11,6 +37,7 @@ function App() {
         maxFileSizeMB: 8,
         preserveOriginalSize: true
     });
+
 
     const handleImagesUpload = async (files: File[]) => {
         setProcessing(true);
@@ -79,80 +106,124 @@ function App() {
 
 
     return (
-        <div className="app">
-            <h1>Instagram Photo Formatter</h1>
+        <ThemeProvider theme={theme}>
+            <Container maxWidth="lg">
+                <Box sx={{ my: 4 }}>
+                    <Typography variant="h3" component="h1" gutterBottom align="center">
+                        Instagram Photo Formatter
+                    </Typography>
 
-            <ProcessingSettings
-                settings={settings}
-                onSettingsChange={(newSettings) => {
-                    setSettings(newSettings);
-                    if (images.length > 0) {
-                        handleReprocessAll();
-                    }
-                }}
-                disabled={processing}
-            />
+                    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+                        <ProcessingSettings
+                            settings={settings}
+                            onSettingsChange={(newSettings) => {
+                                setSettings(newSettings);
+                                if (images.length > 0) {
+                                    handleReprocessAll();
+                                }
+                            }}
+                            disabled={processing}
+                        />
+                    </Paper>
 
-            <ImageUploader onImagesUpload={handleImagesUpload} />
+                    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+                        <ImageUploader onImagesUpload={handleImagesUpload} />
+                    </Paper>
 
-            {processing && <div className="processing">Processing images...</div>}
+                    {processing && <LinearProgress sx={{ my: 2 }} />}
 
-            {images.length > 0 && (
-                <div className="results-container">
-                    <div className="results-header">
-                        <h2>
-                            Processed Images ({getProcessedImagesCount()}/{images.length})
-                        </h2>
-                        <button
-                            onClick={handleDownloadAll}
-                            className="download-all-button"
-                            disabled={processing || getProcessedImagesCount() === 0}
-                        >
-                            Download All
-                        </button>
-                    </div>
+                    {images.length > 0 && (
+                        <Box sx={{ mt: 4 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                                <Typography variant="h5">
+                                    Processed Images ({getProcessedImagesCount()}/{images.length})
+                                </Typography>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<CloudDownload />}
+                                    onClick={handleDownloadAll}
+                                    disabled={processing || getProcessedImagesCount() === 0}
+                                >
+                                    Download All
+                                </Button>
+                            </Stack>
 
-                    <div className="image-grid">
-                        {images.map((img, index) => (
-                            <div key={index} className="image-item">
-                                {img.processed ? (
-                                    <>
-                                        <img
-                                            src={img.processed.dataUrl}
-                                            alt={`Processed ${img.processed.fileName}`}
-                                            className="preview-image"
-                                        />
-                                        <div className="image-info">
-                                            <p>{img.processed.fileName}</p>
-                                            <p>Dimensions: {img.processed.width}x{img.processed.height}px</p>
-                                            <p>Original: {(img.processed.originalSize / 1024 / 1024).toFixed(2)}MB</p>
-                                            <p>Processed: {(img.processed.processedSize / 1024 / 1024).toFixed(2)}MB</p>
-                                            {img.processed.wasCompressed && (
-                                                <p className="compression-notice">
-                                                    ⚠️ Image was compressed to meet size limit
-                                                </p>
+                            <Grid container spacing={3}>
+                                {images.map((img, index) => (
+                                    <Grid item xs={12} sm={6} md={4} key={index}>
+                                        <Card>
+                                            {img.processed ? (
+                                                <>
+                                                    <Box sx={{
+                                                        pt: '100%',
+                                                        position: 'relative',
+                                                        backgroundColor: '#f5f5f5'
+                                                    }}>
+                                                        <Box
+                                                            component="img"
+                                                            src={img.processed.dataUrl}
+                                                            alt={`Processed ${img.processed.fileName}`}
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'contain'
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <CardContent>
+                                                        <Typography variant="subtitle1" noWrap>
+                                                            {img.processed.fileName}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            {img.processed.width}x{img.processed.height}px
+                                                        </Typography>
+                                                        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                                            <Chip
+                                                                label={`Original: ${(img.processed.originalSize / 1024 / 1024).toFixed(2)}MB`}
+                                                                size="small"
+                                                            />
+                                                            <Chip
+                                                                label={`Processed: ${(img.processed.processedSize / 1024 / 1024).toFixed(2)}MB`}
+                                                                size="small"
+                                                                color={img.processed.wasCompressed ? "warning" : "default"}
+                                                            />
+                                                        </Stack>
+                                                    </CardContent>
+                                                    <CardActions>
+                                                        <Button
+                                                            fullWidth
+                                                            variant="contained"
+                                                            startIcon={<CloudDownload />}
+                                                            onClick={() => img.processed && handleDownload(img.processed)}
+                                                        >
+                                                            Download
+                                                        </Button>
+                                                    </CardActions>
+                                                </>
+                                            ) : (
+                                                <CardContent>
+                                                    <Box sx={{ p: 3 }}>
+                                                        <LinearProgress />
+                                                        <Typography sx={{ mt: 2 }} align="center">
+                                                            Processing...
+                                                        </Typography>
+                                                    </Box>
+                                                </CardContent>
                                             )}
-                                        </div>
-
-                                        <button
-                                            onClick={() => img.processed && handleDownload(img.processed)}
-                                            className="download-button"
-                                        >
-                                            Download
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div className="processing-placeholder">
-                                        Processing...
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+                    )}
+                </Box>
+            </Container>
+        </ThemeProvider>
     );
+
 }
 
 export default App;
