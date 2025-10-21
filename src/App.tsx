@@ -1,13 +1,18 @@
-
 import { useState } from 'react'
 import './App.css'
 import { ImageUploader } from './components/ImageUploader'
-import {ImageProcessingService, type ProcessedImage} from "./services/ImageProcessingService.ts";
-
+import { ProcessingSettings } from './components/ProcessingSettings'
+import { ImageProcessingService, type ProcessingOptions, type ProcessedImage } from './services/ImageProcessingService'
 
 function App() {
     const [images, setImages] = useState<{ original: File; processed?: ProcessedImage }[]>([]);
     const [processing, setProcessing] = useState(false);
+    const [settings, setSettings] = useState<ProcessingOptions>({
+        minSize: 1080,
+        quality: 1.0,
+        maxFileSizeMB: 8,
+        preserveOriginalSize: true
+    });
 
     const handleImagesUpload = async (files: File[]) => {
         setProcessing(true);
@@ -18,7 +23,7 @@ function App() {
         try {
             const processed = await Promise.all(
                 files.map(async (file) => {
-                    const processedImage = await ImageProcessingService.processImage(file);
+                    const processedImage = await ImageProcessingService.processImage(file, settings);
                     return { original: file, processed: processedImage };
                 })
             );
@@ -35,6 +40,24 @@ function App() {
             setProcessing(false);
         }
     };
+
+    const handleReprocessAll = async () => {
+        setProcessing(true);
+        try {
+            const reprocessed = await Promise.all(
+                images.map(async (img) => ({
+                    original: img.original,
+                    processed: await ImageProcessingService.processImage(img.original, settings)
+                }))
+            );
+            setImages(reprocessed);
+        } catch (error) {
+            console.error('Error reprocessing images:', error);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
 
     const handleDownload = (processedImage: ProcessedImage) => {
         const link = document.createElement('a');
@@ -56,20 +79,23 @@ function App() {
     const getProcessedImagesCount = () =>
         images.filter(img => img.processed).length;
 
+
     return (
         <div className="app">
             <h1>Instagram Photo Formatter</h1>
-            <div className="info-box">
-                <h3>Processing Settings:</h3>
-                <ul>
-                    <li>Preserves original resolution if larger than 1080px</li>
-                    <li>Maintains maximum possible quality</li>
-                    <li>Only compresses if exceeding Instagram's 8MB limit</li>
-                    <li>Adds white padding to make square format</li>
-                </ul>
-            </div>
-            <ImageUploader onImagesUpload={handleImagesUpload} />
 
+            <ProcessingSettings
+                settings={settings}
+                onSettingsChange={(newSettings) => {
+                    setSettings(newSettings);
+                    if (images.length > 0) {
+                        handleReprocessAll();
+                    }
+                }}
+                disabled={processing}
+            />
+
+            <ImageUploader onImagesUpload={handleImagesUpload} />
 
             {processing && <div className="processing">Processing images...</div>}
 
