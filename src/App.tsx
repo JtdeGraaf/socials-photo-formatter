@@ -16,7 +16,9 @@ import {
     Stack,
     Chip
 } from '@mui/material'
-import { CloudDownload } from '@mui/icons-material'
+import { Close as CloseIcon } from '@mui/icons-material';
+import { IconButton } from '@mui/material';
+import { CloudDownload, Delete as DeleteIcon } from '@mui/icons-material'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 const theme = createTheme({
@@ -105,6 +107,15 @@ function App() {
         images.filter(img => img.processed).length;
 
 
+    const handleDeleteImage = (indexToDelete: number) => {
+        setImages(images.filter((_, index) => index !== indexToDelete));
+    };
+
+    const handleDeleteAll = () => {
+        setImages([]);
+    };
+
+
     return (
         <ThemeProvider theme={theme}>
             <Container maxWidth="lg">
@@ -138,6 +149,18 @@ function App() {
                                 <Typography variant="h5">
                                     Processed Images ({getProcessedImagesCount()}/{images.length})
                                 </Typography>
+                                <Stack direction="row" spacing={2}>
+
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    startIcon={<DeleteIcon />}
+                                    onClick={handleDeleteAll}
+                                    disabled={processing}
+                                >
+                                    Delete All
+                                </Button>
+
                                 <Button
                                     variant="contained"
                                     startIcon={<CloudDownload />}
@@ -146,12 +169,31 @@ function App() {
                                 >
                                     Download All
                                 </Button>
+                                </Stack>
                             </Stack>
 
                             <Grid container spacing={3}>
                                 {images.map((img, index) => (
                                     <Grid item xs={12} sm={6} md={4} key={index}>
-                                        <Card>
+                                        <Card sx={{ position: 'relative' }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteImage(index)}
+                                                sx={{
+                                                    position: 'absolute',
+                                                    right: 8,
+                                                    top: 8,
+                                                    zIndex: 2,
+                                                    bgcolor: 'rgba(255, 255, 255, 0.8)',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(255, 255, 255, 0.9)',
+                                                    }
+                                                }}
+                                                disabled={processing}
+                                            >
+                                                <CloseIcon />
+                                            </IconButton>
+
                                             {img.processed ? (
                                                 <>
                                                     <Box sx={{
