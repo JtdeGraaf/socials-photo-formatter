@@ -59,7 +59,17 @@ function App() {
     return (
         <div className="app">
             <h1>Instagram Photo Formatter</h1>
+            <div className="info-box">
+                <h3>Processing Settings:</h3>
+                <ul>
+                    <li>Preserves original resolution if larger than 1080px</li>
+                    <li>Maintains maximum possible quality</li>
+                    <li>Only compresses if exceeding Instagram's 8MB limit</li>
+                    <li>Adds white padding to make square format</li>
+                </ul>
+            </div>
             <ImageUploader onImagesUpload={handleImagesUpload} />
+
 
             {processing && <div className="processing">Processing images...</div>}
 
@@ -90,8 +100,10 @@ function App() {
                                         />
                                         <div className="image-info">
                                             <p>{img.processed.fileName}</p>
+                                            <p>Dimensions: {img.processed.width}x{img.processed.height}px</p>
                                             <p>Original: {(img.processed.originalSize / 1024 / 1024).toFixed(2)}MB</p>
                                             <p>Processed: {(img.processed.processedSize / 1024 / 1024).toFixed(2)}MB</p>
+                                            <p>Quality: {Math.round(img.processed.quality * 100)}%</p>
                                         </div>
                                         <button
                                             onClick={() => img.processed && handleDownload(img.processed)}

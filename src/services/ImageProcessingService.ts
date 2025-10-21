@@ -1,7 +1,9 @@
+
 export interface ProcessingOptions {
-    targetSize: number;
+    minSize: number;  // Minimum size for the shortest side
     quality: number;
     maxFileSizeMB?: number;
+    preserveOriginalSize?: boolean;
 }
 
 export interface ProcessedImage {
@@ -11,13 +13,15 @@ export interface ProcessedImage {
     width: number;
     height: number;
     fileName: string;
+    quality: number;
 }
 
 export class ImageProcessingService {
     private static DEFAULT_OPTIONS: ProcessingOptions = {
-        targetSize: 1080,
-        quality: 0.9,
-        maxFileSizeMB: 8 // Instagram's limit is 8MB
+        minSize: 1080,
+        quality: 1.0,
+        maxFileSizeMB: 8,
+        preserveOriginalSize: true
     };
 
     static async processImage(
@@ -26,7 +30,6 @@ export class ImageProcessingService {
     ): Promise<ProcessedImage> {
         const settings = { ...this.DEFAULT_OPTIONS, ...options };
 
-        // Create canvas
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -36,41 +39,59 @@ export class ImageProcessingService {
         // Load image
         const img = await this.loadImage(file);
 
-        // Set canvas size
-        canvas.width = settings.targetSize;
-        canvas.height = settings.targetSize;
+        // Calculate dimensions while preserving aspect ratio
+        let finalWidth: number;
+        let finalHeight: number;
+
+        if (settings.preserveOriginalSize &&
+            img.width >= settings.minSize &&
+            img.height >= settings.minSize) {
+            // Keep original dimensions if they're large enough
+            finalWidth = img.width;
+            finalHeight = img.height;
+        } else {
+            // Scale up to meet minimum size requirement
+            const aspectRatio = img.width / img.height;
+            if (aspectRatio > 1) {
+                finalHeight = settings.minSize;
+                finalWidth = Math.round(settings.minSize * aspectRatio);
+            } else {
+                finalWidth = settings.minSize;
+                finalHeight = Math.round(settings.minSize / aspectRatio);
+            }
+        }
+
+        // Make the canvas big enough for the image and the white padding
+        const maxSide = Math.max(finalWidth, finalHeight);
+        canvas.width = maxSide;
+        canvas.height = maxSide;
 
         // Fill white background
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Calculate scaling and positioning
-        const scale = Math.min(
-            canvas.width / img.width,
-            canvas.height / img.height
-        );
+        // Center the image
+        const x = (maxSide - finalWidth) / 2;
+        const y = (maxSide - finalHeight) / 2;
 
-        const x = (canvas.width - img.width * scale) / 2;
-        const y = (canvas.height - img.height * scale) / 2;
-
-        // Draw image
+        // Draw image maintaining its resolution
         ctx.drawImage(
             img,
             x,
             y,
-            img.width * scale,
-            img.height * scale
+            finalWidth,
+            finalHeight
         );
 
-        // Convert to data URL
+        // Start with maximum quality
         let quality = settings.quality;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
 
-        // Reduce quality if size exceeds max file size
+        // Only reduce quality if explicitly set maxFileSizeMB and current size exceeds it
         if (settings.maxFileSizeMB) {
             const maxSizeBytes = settings.maxFileSizeMB * 1024 * 1024;
-            while (this.getDataUrlSize(dataUrl) > maxSizeBytes && quality > 0.1) {
-                quality -= 0.1;
+            while (this.getDataUrlSize(dataUrl) > maxSizeBytes && quality > 0.5) {
+                quality -= 0.05;
                 dataUrl = canvas.toDataURL('image/jpeg', quality);
             }
         }
@@ -79,9 +100,10 @@ export class ImageProcessingService {
             dataUrl,
             originalSize: file.size,
             processedSize: this.getDataUrlSize(dataUrl),
-            width: settings.targetSize,
-            height: settings.targetSize,
-            fileName: file.name
+            width: canvas.width,
+            height: canvas.height,
+            fileName: file.name,
+            quality
         };
     }
 
