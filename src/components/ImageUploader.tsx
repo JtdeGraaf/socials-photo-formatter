@@ -1,10 +1,10 @@
 import React, {type ChangeEvent, useState } from 'react';
 
 interface ImageUploaderProps {
-    onImageUpload: (file: File) => void;
+    onImagesUpload: (files: File[]) => void;
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) => {
+export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImagesUpload }) => {
     const [dragActive, setDragActive] = useState(false);
 
     const handleDrag = (e: React.DragEvent) => {
@@ -22,15 +22,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
         e.stopPropagation();
         setDragActive(false);
 
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            onImageUpload(e.dataTransfer.files[0]);
+        const files = Array.from(e.dataTransfer.files).filter(
+            file => file.type.startsWith('image/')
+        );
+        if (files.length > 0) {
+            onImagesUpload(files);
         }
     };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         e.preventDefault();
-        if (e.target.files && e.target.files[0]) {
-            onImageUpload(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files).filter(
+                file => file.type.startsWith('image/')
+            );
+            onImagesUpload(files);
         }
     };
 
@@ -48,11 +54,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
                 accept="image/*"
                 onChange={handleChange}
                 className="file-input"
+                multiple
             />
             <label htmlFor="image-input" className="upload-label">
                 <div>
-                    <p>Drag and drop your image here or</p>
-                    <button type="button">Choose a file</button>
+                    <p>Drag and drop your images here or</p>
+                    <button type="button">Choose files</button>
+                    <p className="upload-hint">You can select multiple images</p>
                 </div>
             </label>
         </div>
