@@ -148,14 +148,33 @@
 }
 
 .settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .setting-item {
   display: flex;
   flex-direction: column;
+}
+
+.setting-item.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setting-item.size-limit {
+  margin-left: 1.5rem;
+  padding: 0.5rem;
+  background-color: #fff;
+  border-radius: 4px;
 }
 
 .setting-item label {
@@ -167,13 +186,7 @@
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  width: 100%;
-}
-
-.setting-item.checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
+  width: 100px;
 }
 
 .setting-item small {
@@ -185,4 +198,9 @@
 .setting-item input:disabled {
   background-color: #eee;
   cursor: not-allowed;
+}
+
+.compression-notice {
+  color: #ff9800;
+  font-weight: 500;
 }

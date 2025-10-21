@@ -8,8 +8,6 @@ function App() {
     const [images, setImages] = useState<{ original: File; processed?: ProcessedImage }[]>([]);
     const [processing, setProcessing] = useState(false);
     const [settings, setSettings] = useState<ProcessingOptions>({
-        minSize: 1080,
-        quality: 1.0,
         maxFileSizeMB: 8,
         preserveOriginalSize: true
     });
@@ -129,8 +127,13 @@ function App() {
                                             <p>Dimensions: {img.processed.width}x{img.processed.height}px</p>
                                             <p>Original: {(img.processed.originalSize / 1024 / 1024).toFixed(2)}MB</p>
                                             <p>Processed: {(img.processed.processedSize / 1024 / 1024).toFixed(2)}MB</p>
-                                            <p>Quality: {Math.round(img.processed.quality * 100)}%</p>
+                                            {img.processed.wasCompressed && (
+                                                <p className="compression-notice">
+                                                    ⚠️ Image was compressed to meet size limit
+                                                </p>
+                                            )}
                                         </div>
+
                                         <button
                                             onClick={() => img.processed && handleDownload(img.processed)}
                                             className="download-button"

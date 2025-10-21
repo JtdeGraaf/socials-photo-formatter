@@ -1,9 +1,6 @@
-
 export interface ProcessingOptions {
-    minSize: number;  // Minimum size for the shortest side
-    quality: number;
-    maxFileSizeMB?: number;
-    preserveOriginalSize?: boolean;
+    maxFileSizeMB?: number;  // undefined means no compression
+    preserveOriginalSize: boolean;
 }
 
 export interface ProcessedImage {
@@ -13,14 +10,12 @@ export interface ProcessedImage {
     width: number;
     height: number;
     fileName: string;
-    quality: number;
+    wasCompressed: boolean;
 }
 
 export class ImageProcessingService {
     private static DEFAULT_OPTIONS: ProcessingOptions = {
-        minSize: 1080,
-        quality: 1.0,
-        maxFileSizeMB: 8,
+        maxFileSizeMB: 8,  // Instagram's limit
         preserveOriginalSize: true
     };
 
@@ -43,25 +38,23 @@ export class ImageProcessingService {
         let finalWidth: number;
         let finalHeight: number;
 
-        if (settings.preserveOriginalSize &&
-            img.width >= settings.minSize &&
-            img.height >= settings.minSize) {
-            // Keep original dimensions if they're large enough
+        if (settings.preserveOriginalSize) {
+            // Keep original dimensions
             finalWidth = img.width;
             finalHeight = img.height;
         } else {
-            // Scale up to meet minimum size requirement
+            // Scale to 1080px minimum
             const aspectRatio = img.width / img.height;
             if (aspectRatio > 1) {
-                finalHeight = settings.minSize;
-                finalWidth = Math.round(settings.minSize * aspectRatio);
+                finalHeight = 1080;
+                finalWidth = Math.round(1080 * aspectRatio);
             } else {
-                finalWidth = settings.minSize;
-                finalHeight = Math.round(settings.minSize / aspectRatio);
+                finalWidth = 1080;
+                finalHeight = Math.round(1080 / aspectRatio);
             }
         }
 
-        // Make the canvas big enough for the image and the white padding
+        // Make the canvas big enough for the image and padding
         const maxSide = Math.max(finalWidth, finalHeight);
         canvas.width = maxSide;
         canvas.height = maxSide;
@@ -74,7 +67,7 @@ export class ImageProcessingService {
         const x = (maxSide - finalWidth) / 2;
         const y = (maxSide - finalHeight) / 2;
 
-        // Draw image maintaining its resolution
+        // Draw image
         ctx.drawImage(
             img,
             x,
@@ -83,17 +76,24 @@ export class ImageProcessingService {
             finalHeight
         );
 
-        // Start with maximum quality
-        let quality = settings.quality;
-        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let dataUrl: string;
+        let wasCompressed = false;
 
-        // Only reduce quality if explicitly set maxFileSizeMB and current size exceeds it
         if (settings.maxFileSizeMB) {
+            // Start with maximum quality
+            let quality = 1.0;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+            // Reduce quality only if needed
             const maxSizeBytes = settings.maxFileSizeMB * 1024 * 1024;
             while (this.getDataUrlSize(dataUrl) > maxSizeBytes && quality > 0.5) {
+                wasCompressed = true;
                 quality -= 0.05;
                 dataUrl = canvas.toDataURL('image/jpeg', quality);
             }
+        } else {
+            // No compression, use PNG for maximum quality
+            dataUrl = canvas.toDataURL('image/png');
         }
 
         return {
@@ -103,9 +103,10 @@ export class ImageProcessingService {
             width: canvas.width,
             height: canvas.height,
             fileName: file.name,
-            quality
+            wasCompressed
         };
     }
+
 
     private static loadImage(file: File): Promise<HTMLImageElement> {
         return new Promise((resolve, reject) => {
