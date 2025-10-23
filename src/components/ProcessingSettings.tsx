@@ -1,7 +1,6 @@
 
 import React from 'react';
 import {
-    FormControl,
     FormControlLabel,
     Switch,
     Typography,
@@ -35,13 +34,6 @@ export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
         onSettingsChange({
             ...settings,
             maxFileSizeMB: !isNaN(value) && value > 0 ? value : undefined
-        });
-    };
-
-    const handlePreserveSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        onSettingsChange({
-            ...settings,
-            preserveOriginalSize: event.target.checked
         });
     };
 
@@ -83,19 +75,6 @@ export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
                         />
                     )}
                 </Box>
-
-                <FormControl component="fieldset">
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                checked={settings.preserveOriginalSize}
-                                onChange={handlePreserveSizeChange}
-                                disabled={disabled}
-                            />
-                        }
-                        label="Preserve original image dimensions"
-                    />
-                </FormControl>
             </Box>
         </Paper>
     );

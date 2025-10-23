@@ -1,6 +1,5 @@
 export interface ProcessingOptions {
     maxFileSizeMB?: number;  // undefined means no compression
-    preserveOriginalSize: boolean;
 }
 
 export interface ProcessedImage {
