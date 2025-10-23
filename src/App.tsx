@@ -67,22 +67,22 @@ function App() {
         }
     };
 
-    const handleReprocessAll = async () => {
-        setProcessing(true);
-        try {
-            const reprocessed = await Promise.all(
-                images.map(async (img) => ({
-                    original: img.original,
-                    processed: await ImageProcessingService.processImage(img.original, settings)
-                }))
-            );
-            setImages(reprocessed);
-        } catch (error) {
-            console.error('Error reprocessing images:', error);
-        } finally {
-            setProcessing(false);
-        }
-    };
+    // const handleReprocessAll = async () => {
+    //     setProcessing(true);
+    //     try {
+    //         const reprocessed = await Promise.all(
+    //             images.map(async (img) => ({
+    //                 original: img.original,
+    //                 processed: await ImageProcessingService.processImage(img.original, settings)
+    //             }))
+    //         );
+    //         setImages(reprocessed);
+    //     } catch (error) {
+    //         console.error('Error reprocessing images:', error);
+    //     } finally {
+    //         setProcessing(false);
+    //     }
+    // };
 
 
     const handleDownload = (processedImage: ProcessedImage) => {
@@ -129,7 +129,7 @@ function App() {
                             onSettingsChange={(newSettings) => {
                                 setSettings(newSettings);
                                 if (images.length > 0) {
-                                    handleReprocessAll();
+                                    //handleReprocessAll();
                                 }
                             }}
                             disabled={processing}
