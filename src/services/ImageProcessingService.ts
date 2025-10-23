@@ -23,19 +23,29 @@ export class ImageProcessingService {
         // First, let's create an object URL and load the image to get its dimensions
         const img = await this.loadImage(file);
 
-
-        // Create canvas at the same size as the image
+        // Determine the size of the square canvas (use the larger dimension)
+        const squareSize = Math.max(img.width, img.height);
+        
+        // Create a square canvas
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = squareSize;
+        canvas.height = squareSize;
 
         const ctx = canvas.getContext('2d', {
             alpha: false  // Disable alpha channel since we don't need it
         });
         if (!ctx) throw new Error('Cannot get canvas context');
 
-        // Draw directly without any padding
-        ctx.drawImage(img, 0, 0, img.width, img.height);
+        // Fill the canvas with white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, squareSize, squareSize);
+
+        // Calculate position to center the image
+        const xOffset = (squareSize - img.width) / 2;
+        const yOffset = (squareSize - img.height) / 2;
+
+        // Draw the image centered in the square canvas
+        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
 
         let dataUrl: string;
         let wasCompressed = false;
