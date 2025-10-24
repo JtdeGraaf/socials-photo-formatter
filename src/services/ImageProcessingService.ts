@@ -23,28 +23,58 @@ export class ImageProcessingService {
         const img = await this.loadImage(file);
 
         // Determine the size of the square canvas (use the larger dimension)
-        const squareSize = Math.max(img.width, img.height);
-        
-        // Create a square canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = squareSize;
-        canvas.height = squareSize;
+        const canvasSize = Math.max(img.width, img.height);
 
-        const ctx = canvas.getContext('2d', {
-            alpha: false  // Disable alpha channel since we don't need it
-        });
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+
+        const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) throw new Error('Cannot get canvas context');
 
         // Fill the canvas with white background
         ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, squareSize, squareSize);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Calculate position to center the image
-        const xOffset = (squareSize - img.width) / 2;
-        const yOffset = (squareSize - img.height) / 2;
+        //// START DRAWING SHADOWS AND IMAGE ////
 
-        // Draw the image centered in the square canvas
+        // === First layer: soft ambient halo (around the image) ===
+        const ambientBlur = Math.round(canvasSize * 0.03);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+        ctx.shadowBlur = ambientBlur;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Center the image
+        const xOffset = (canvas.width - img.width) / 2;
+        const yOffset = (canvas.height - img.height) / 2;
+
+        // Draw the image once to create the soft glow
         ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+
+        // === Second layer: stronger, directional shadow underneath ===
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = Math.round(canvasSize * 0.02);
+        //ctx.shadowOffsetX = Math.round(canvasSize * 0.015);
+        //ctx.shadowOffsetY = Math.round(canvasSize * 0.015);
+        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+
+
+        // 3) Gentle top-left lift (makes the top edge read more)
+        ctx.shadowColor = 'rgba(0,0,0,0.18)';
+        ctx.shadowBlur = Math.round(canvasSize * 0.02);
+        //ctx.shadowOffsetX = -Math.round(canvasSize * 0.008);
+        //ctx.shadowOffsetY = -Math.round(canvasSize * 0.008);
+        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+
+
+        // Draw the image again to layer in the deeper shadow
+        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+
+        //// END DRAWING SHADOWS AND IMAGE ////
 
         let dataUrl: string;
         let wasCompressed = false;
@@ -84,6 +114,10 @@ export class ImageProcessingService {
             fileName: file.name,
             wasCompressed
         };
+
+    }
+
+    private static drawShadowAroundImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, canvasSize: number) {
 
     }
 

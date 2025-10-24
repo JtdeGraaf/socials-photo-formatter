@@ -67,24 +67,6 @@ function App() {
         }
     };
 
-    // const handleReprocessAll = async () => {
-    //     setProcessing(true);
-    //     try {
-    //         const reprocessed = await Promise.all(
-    //             images.map(async (img) => ({
-    //                 original: img.original,
-    //                 processed: await ImageProcessingService.processImage(img.original, settings)
-    //             }))
-    //         );
-    //         setImages(reprocessed);
-    //     } catch (error) {
-    //         console.error('Error reprocessing images:', error);
-    //     } finally {
-    //         setProcessing(false);
-    //     }
-    // };
-
-
     const handleDownload = (processedImage: ProcessedImage) => {
         const link = document.createElement('a');
         link.href = processedImage.dataUrl;
@@ -128,9 +110,6 @@ function App() {
                             settings={settings}
                             onSettingsChange={(newSettings) => {
                                 setSettings(newSettings);
-                                if (images.length > 0) {
-                                    //handleReprocessAll();
-                                }
                             }}
                             disabled={processing}
                         />
