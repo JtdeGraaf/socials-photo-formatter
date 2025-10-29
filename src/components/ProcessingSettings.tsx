@@ -29,6 +29,13 @@ export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
         });
     };
 
+    const handleShadowToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onSettingsChange({
+            ...settings,
+            enableShadow: event.target.checked
+        });
+    };
+
     const handleSizeLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseFloat(event.target.value);
         onSettingsChange({
@@ -44,6 +51,17 @@ export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
             </Typography>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={settings.enableShadow !== false}
+                            onChange={handleShadowToggle}
+                            disabled={disabled}
+                        />
+                    }
+                    label="Enable shadow effect"
+                />
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <FormControlLabel
                         control={

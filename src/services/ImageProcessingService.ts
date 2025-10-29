@@ -1,5 +1,6 @@
 export interface ProcessingOptions {
     maxFileSizeMB?: number;  // undefined means no compression
+    enableShadow?: boolean;  // undefined or true means shadow enabled
 }
 
 export interface ProcessedImage {
@@ -36,45 +37,53 @@ export class ImageProcessingService {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        //// START DRAWING SHADOWS AND IMAGE ////
-
-        // === First layer: soft ambient halo (around the image) ===
-        const ambientBlur = Math.round(canvasSize * 0.03);
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-        ctx.shadowBlur = ambientBlur;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-
         // Center the image
         const xOffset = (canvas.width - img.width) / 2;
         const yOffset = (canvas.height - img.height) / 2;
 
-        // Draw the image once to create the soft glow
-        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+        // Apply shadow effect if enabled (default is true)
+        const shouldApplyShadow = settings.enableShadow !== false;
 
-        // === Second layer: stronger, directional shadow underneath ===
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-        ctx.shadowBlur = Math.round(canvasSize * 0.02);
-        //ctx.shadowOffsetX = Math.round(canvasSize * 0.015);
-        //ctx.shadowOffsetY = Math.round(canvasSize * 0.015);
-        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+        if (shouldApplyShadow) {
+            //// START DRAWING SHADOWS AND IMAGE ////
+
+            // === First layer: soft ambient halo (around the image) ===
+            const ambientBlur = Math.round(canvasSize * 0.03);
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+            ctx.shadowBlur = ambientBlur;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Draw the image once to create the soft glow
+            ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+
+            // === Second layer: stronger, directional shadow underneath ===
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+            ctx.shadowBlur = Math.round(canvasSize * 0.02);
+            //ctx.shadowOffsetX = Math.round(canvasSize * 0.015);
+            //ctx.shadowOffsetY = Math.round(canvasSize * 0.015);
+            ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
 
 
-        // 3) Gentle top-left lift (makes the top edge read more)
-        ctx.shadowColor = 'rgba(0,0,0,0.18)';
-        ctx.shadowBlur = Math.round(canvasSize * 0.02);
-        //ctx.shadowOffsetX = -Math.round(canvasSize * 0.008);
-        //ctx.shadowOffsetY = -Math.round(canvasSize * 0.008);
-        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+            // 3) Gentle top-left lift (makes the top edge read more)
+            ctx.shadowColor = 'rgba(0,0,0,0.18)';
+            ctx.shadowBlur = Math.round(canvasSize * 0.02);
+            //ctx.shadowOffsetX = -Math.round(canvasSize * 0.008);
+            //ctx.shadowOffsetY = -Math.round(canvasSize * 0.008);
+            ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
 
 
-        // Draw the image again to layer in the deeper shadow
-        ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+            // Draw the image again to layer in the deeper shadow
+            ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
 
-        // Reset shadow
-        ctx.shadowColor = 'transparent';
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
 
-        //// END DRAWING SHADOWS AND IMAGE ////
+            //// END DRAWING SHADOWS AND IMAGE ////
+        } else {
+            // Draw the image without shadow
+            ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+        }
 
         let dataUrl: string;
         let wasCompressed = false;
@@ -117,9 +126,6 @@ export class ImageProcessingService {
 
     }
 
-    private static drawShadowAroundImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, canvasSize: number) {
-
-    }
 
     private static getDataUrlSize(dataUrl: string): number {
         // Remove the data URL prefix to get just the base64 string

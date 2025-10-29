@@ -36,7 +36,8 @@ function App() {
     const [images, setImages] = useState<{ original: File; processed?: ProcessedImage }[]>([]);
     const [processing, setProcessing] = useState(false);
     const [settings, setSettings] = useState<ProcessingOptions>({
-        maxFileSizeMB: 8
+        maxFileSizeMB: 8,
+        enableShadow: true
     });
 
 
