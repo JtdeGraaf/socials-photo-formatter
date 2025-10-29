@@ -1,6 +1,7 @@
 export interface ProcessingOptions {
     maxFileSizeMB?: number;  // undefined means no compression
     enableShadow?: boolean;  // undefined or true means shadow enabled
+    backgroundType?: 'white' | 'blurred';  // undefined or 'white' means white background
 }
 
 export interface ProcessedImage {
@@ -33,13 +34,41 @@ export class ImageProcessingService {
         const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) throw new Error('Cannot get canvas context');
 
-        // Fill the canvas with white background
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         // Center the image
         const xOffset = (canvas.width - img.width) / 2;
         const yOffset = (canvas.height - img.height) / 2;
+
+        // Draw background based on backgroundType setting
+        const backgroundType = settings.backgroundType || 'white';
+
+        if (backgroundType === 'blurred') {
+            // Draw a heavily blurred version of the image as background
+            // Apply multiple blur passes for a more intense effect
+
+            // Create a temporary canvas for the blur effect
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d', { alpha: false });
+            if (!tempCtx) throw new Error('Cannot get temp canvas context');
+
+            // Draw image to temp canvas with heavy blur
+            tempCtx.filter = 'blur(80px)';
+            tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+
+            // Draw the blurred image to main canvas with additional blur
+            ctx.filter = 'blur(80px)';
+            ctx.drawImage(tempCanvas, 0, 0);
+            ctx.filter = 'none';
+
+            // Add a darkening overlay for better contrast
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else {
+            // Fill the canvas with white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
 
         // Apply shadow effect if enabled (default is true)
         const shouldApplyShadow = settings.enableShadow !== false;

@@ -7,7 +7,11 @@ import {
     Box,
     Paper,
     TextField,
-    InputAdornment
+    InputAdornment,
+    RadioGroup,
+    Radio,
+    FormControl,
+    FormLabel
 } from '@mui/material';
 import { type ProcessingOptions } from '../services/ImageProcessingService';
 
@@ -36,6 +40,13 @@ export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
         });
     };
 
+    const handleBackgroundTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onSettingsChange({
+            ...settings,
+            backgroundType: event.target.value as 'white' | 'blurred'
+        });
+    };
+
     const handleSizeLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseFloat(event.target.value);
         onSettingsChange({
@@ -61,6 +72,28 @@ export const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
                     }
                     label="Enable shadow effect"
                 />
+
+                <FormControl component="fieldset">
+                    <FormLabel component="legend">Background Type</FormLabel>
+                    <RadioGroup
+                        row
+                        value={settings.backgroundType || 'white'}
+                        onChange={handleBackgroundTypeChange}
+                    >
+                        <FormControlLabel
+                            value="white"
+                            control={<Radio />}
+                            label="White"
+                            disabled={disabled}
+                        />
+                        <FormControlLabel
+                            value="blurred"
+                            control={<Radio />}
+                            label="Blurred Image"
+                            disabled={disabled}
+                        />
+                    </RadioGroup>
+                </FormControl>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <FormControlLabel

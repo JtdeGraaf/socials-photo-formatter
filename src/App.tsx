@@ -37,7 +37,8 @@ function App() {
     const [processing, setProcessing] = useState(false);
     const [settings, setSettings] = useState<ProcessingOptions>({
         maxFileSizeMB: 8,
-        enableShadow: true
+        enableShadow: true,
+        backgroundType: 'white'
     });
 
 
