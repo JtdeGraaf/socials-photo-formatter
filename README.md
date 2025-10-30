@@ -2,7 +2,7 @@
 This tool is designed to format your photos so social media apps like Instagram will not screw over the aspect ratio or crop them in unwanted ways.
 It puts your photos onto a square canvas, which works specifically well for Instagram posts and maybe other social media platforms.
 
-**Live app**: [https://jtdegraaf.github.io/socials-photo-formatter/](https://jtdegraaf.github.io/socials-photo-formatter/)
+**Live app**: [https://photo.graaf.dev/](https://photo.graaf.dev/)
 
 ## Features
 - Transform any photo into a square format without altering the original aspect ratio.
