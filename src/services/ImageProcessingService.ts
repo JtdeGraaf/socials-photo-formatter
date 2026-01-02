@@ -1,3 +1,5 @@
+import piexif, { type PiexifData } from 'piexifjs';
+
 export interface ProcessingOptions {
     maxFileSizeMB?: number;  // undefined means no compression
     enableShadow?: boolean;  // undefined or true means shadow enabled
@@ -20,6 +22,27 @@ export class ImageProcessingService {
         options: Partial<ProcessingOptions> = {}
     ): Promise<ProcessedImage> {
         const settings = { ...options };
+
+        // Read original file as data URL so we can extract EXIF if present
+        let originalDataUrl: string | null;
+        try {
+            originalDataUrl = await this.readFileAsDataUrl(file);
+        } catch {
+            // If reading fails, continue without EXIF
+            originalDataUrl = null;
+        }
+
+        // Try to extract EXIF from original if it's a JPEG
+        let exifObject: PiexifData | null = null;
+        if (originalDataUrl && originalDataUrl.startsWith('data:image/jpeg')) {
+            try {
+                exifObject = piexif.load(originalDataUrl);
+                // If load returns an object, exifObject will be non-null
+            } catch {
+                // Not much to do — proceed without EXIF
+                exifObject = null;
+            }
+        }
 
         // First, let's create an object URL and load the image to get its dimensions
         const img = await this.loadImage(file);
@@ -141,6 +164,16 @@ export class ImageProcessingService {
             }
         }
 
+        // If the final output is JPEG and we extracted EXIF from the original, re-insert it.
+        if (exifObject && dataUrl.startsWith('data:image/jpeg')) {
+            try {
+                const exifStr = piexif.dump(exifObject);
+                dataUrl = piexif.insert(exifStr, dataUrl);
+            } catch {
+                // If reinsertion fails, fall back to the dataUrl without EXIF
+            }
+        }
+
         const processedSize = this.getDataUrlSize(dataUrl);
 
         return {
@@ -169,6 +202,22 @@ export class ImageProcessingService {
             img.onload = () => resolve(img);
             img.onerror = reject;
             img.src = URL.createObjectURL(file);
+        });
+    }
+
+    // Helper to read a File as a data URL
+    private static readFileAsDataUrl(file: File): Promise<string> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    resolve(reader.result);
+                } else {
+                    reject(new Error('Unexpected FileReader result type'));
+                }
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
         });
     }
 }
