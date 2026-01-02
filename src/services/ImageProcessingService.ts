@@ -1,4 +1,5 @@
 import piexif, { type PiexifData } from 'piexifjs';
+import { ProcessingQueue } from './ProcessingQueue';
 
 export interface ProcessingOptions {
     maxFileSizeMB?: number;  // undefined means no compression
@@ -17,11 +18,25 @@ export interface ProcessedImage {
 }
 
 export class ImageProcessingService {
+    // Single ProcessingQueue instance for the service (default concurrency 5)
+    private static _queue = new ProcessingQueue(2);
+
     static async processImage(
         file: File,
         options: Partial<ProcessingOptions> = {}
     ): Promise<ProcessedImage> {
+        return this._queue.enqueue(() => this._processImageImpl(file, options));
+    }
+
+    // The actual heavy implementation — moved out so the public method can be a queued wrapper.
+    private static async _processImageImpl(
+        file: File,
+        options: Partial<ProcessingOptions> = {}
+    ): Promise<ProcessedImage> {
         const settings = { ...options };
+
+        // Yield once to give the browser a chance to handle input/paint before heavy work
+        await new Promise((r) => setTimeout(r, 0));
 
         // Read original file as data URL so we can extract EXIF if present
         let originalDataUrl: string | null;
@@ -57,6 +72,9 @@ export class ImageProcessingService {
         const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) throw new Error('Cannot get canvas context');
 
+        // Yield to the event loop so the browser can update UI before heavy drawing starts
+        await new Promise((r) => setTimeout(r, 0));
+
         // Center the image
         const xOffset = (canvas.width - img.width) / 2;
         const yOffset = (canvas.height - img.height) / 2;
@@ -75,14 +93,27 @@ export class ImageProcessingService {
             const tempCtx = tempCanvas.getContext('2d', { alpha: false });
             if (!tempCtx) throw new Error('Cannot get temp canvas context');
 
-            // Draw image to temp canvas with heavy blur
-            tempCtx.filter = 'blur(80px)';
+            // Downscale the source into a smaller temp canvas before blurring to dramatically reduce work
+            const bgScale = Math.min(1, Math.max(0.25, 1024 / canvasSize));
+            tempCanvas.width = Math.max(1, Math.round(canvas.width * bgScale));
+            tempCanvas.height = Math.max(1, Math.round(canvas.height * bgScale));
+            // Draw image to temp canvas (scaled down)
+            tempCtx.filter = 'none';
             tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
 
-            // Draw the blurred image to main canvas with additional blur
-            ctx.filter = 'blur(80px)';
-            ctx.drawImage(tempCanvas, 0, 0);
+            // Apply a moderate blur on the small canvas — when scaled up this reads as a heavy blur
+            tempCtx.filter = 'blur(30px)';
+            const blurred = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            // Put the blurred data back (this forces the browser to perform the filter)
+            tempCtx.putImageData(blurred, 0, 0);
+
+            // Yield so the browser can remain responsive while we composite the blurred background
+            await new Promise((r) => setTimeout(r, 0));
+
+            // Draw the blurred, scaled-up image to main canvas
             ctx.filter = 'none';
+            ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+
 
             // Add a darkening overlay for better contrast
             ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
@@ -92,6 +123,9 @@ export class ImageProcessingService {
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+
+        // Yield before shadow drawing; shadow draws can be expensive
+        await new Promise((r) => setTimeout(r, 0));
 
         // Apply shadow effect if enabled (default is true)
         const shouldApplyShadow = settings.enableShadow !== false;
@@ -108,22 +142,19 @@ export class ImageProcessingService {
 
             // Draw the image once to create the soft glow
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
+            await new Promise((r) => setTimeout(r, 0));
 
             // === Second layer: stronger, directional shadow underneath ===
             ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
             ctx.shadowBlur = Math.round(canvasSize * 0.02);
-            //ctx.shadowOffsetX = Math.round(canvasSize * 0.015);
-            //ctx.shadowOffsetY = Math.round(canvasSize * 0.015);
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
-
+            await new Promise((r) => setTimeout(r, 0));
 
             // 3) Gentle top-left lift (makes the top edge read more)
             ctx.shadowColor = 'rgba(0,0,0,0.18)';
             ctx.shadowBlur = Math.round(canvasSize * 0.02);
-            //ctx.shadowOffsetX = -Math.round(canvasSize * 0.008);
-            //ctx.shadowOffsetY = -Math.round(canvasSize * 0.008);
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
-
+            await new Promise((r) => setTimeout(r, 0));
 
             // Draw the image again to layer in the deeper shadow
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
@@ -140,29 +171,34 @@ export class ImageProcessingService {
         let dataUrl: string;
         let wasCompressed = false;
 
-        if (settings.maxFileSizeMB) {
-            // Start with reasonable quality
-            let quality = 0.92; // JPEG default quality
-            dataUrl = canvas.toDataURL('image/jpeg', quality);
-            let currentSize = this.getDataUrlSize(dataUrl);
+        // Yield before encoding to give the browser a chance to paint
+        await new Promise((r) => setTimeout(r, 0));
 
-            // Reduce quality if needed
-            const maxSizeBytes = settings.maxFileSizeMB * 1024 * 1024;
-            while (currentSize > maxSizeBytes && quality > 0.5) {
-                wasCompressed = true;
-                quality -= 0.05;
-                dataUrl = canvas.toDataURL('image/jpeg', quality);
-                currentSize = this.getDataUrlSize(dataUrl);
-            }
-        } else {
-            // Even without compression limit, use JPEG for very large images
-            const isVeryLarge = img.width * img.height > 4096 * 4096;
-            if (isVeryLarge) {
-                dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-            } else {
-                dataUrl = canvas.toDataURL('image/png');
-            }
-        }
+        if (settings.maxFileSizeMB) {
+             // Start with reasonable quality
+             let quality = 0.92; // JPEG default quality
+             dataUrl = canvas.toDataURL('image/jpeg', quality);
+             let currentSize = this.getDataUrlSize(dataUrl);
+
+             // Reduce quality if needed
+             const maxSizeBytes = settings.maxFileSizeMB * 1024 * 1024;
+             while (currentSize > maxSizeBytes && quality > 0.5) {
+                 wasCompressed = true;
+                 quality -= 0.05;
+                 // Yield between compression attempts so the main thread can service input
+                 await new Promise((r) => setTimeout(r, 0));
+                 dataUrl = canvas.toDataURL('image/jpeg', quality);
+                 currentSize = this.getDataUrlSize(dataUrl);
+             }
+         } else {
+             // Even without compression limit, use JPEG for very large images
+             const isVeryLarge = img.width * img.height > 4096 * 4096;
+             if (isVeryLarge) {
+                 dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+             } else {
+                 dataUrl = canvas.toDataURL('image/png');
+             }
+         }
 
         // If the final output is JPEG and we extracted EXIF from the original, re-insert it.
         if (exifObject && dataUrl.startsWith('data:image/jpeg')) {

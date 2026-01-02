@@ -13,7 +13,9 @@ import {
     LinearProgress,
     Paper,
     Stack,
-    Chip
+    Chip,
+    CircularProgress,
+    Backdrop
 } from '@mui/material'
 import Grid from '@mui/material/Grid';
 import { Close as CloseIcon } from '@mui/icons-material';
@@ -48,25 +50,27 @@ function App() {
         const newImages = files.map(file => ({ original: file }));
         setImages(prev => [...prev, ...newImages]);
 
-        try {
-            const processed = await Promise.all(
-                files.map(async (file) => {
-                    const processedImage = await ImageProcessingService.processImage(file, settings);
-                    return { original: file, processed: processedImage };
-                })
-            );
+        // Process images individually and update UI as each one completes
+        const processingPromises = files.map(async (file) => {
+            try {
+                const processedImage = await ImageProcessingService.processImage(file, settings);
 
-            setImages(prev => {
-                const existing = prev.filter(
-                    img => !files.includes(img.original)
-                );
-                return [...existing, ...processed];
-            });
-        } catch (error) {
-            console.error('Error processing images:', error);
-        } finally {
-            setProcessing(false);
-        }
+                // Update the UI immediately when this image finishes
+                setImages(prev => {
+                    return prev.map(img =>
+                        img.original === file
+                            ? { original: file, processed: processedImage }
+                            : img
+                    );
+                });
+            } catch (error) {
+                console.error(`Error processing ${file.name}:`, error);
+            }
+        });
+
+        // Wait for all to complete before turning off the processing indicator
+        await Promise.all(processingPromises);
+        setProcessing(false);
     };
 
     const handleDownload = (processedImage: ProcessedImage) => {
@@ -226,14 +230,53 @@ function App() {
                                                     </CardActions>
                                                 </>
                                             ) : (
-                                                <CardContent>
-                                                    <Box sx={{ p: 3 }}>
-                                                        <LinearProgress />
-                                                        <Typography sx={{ mt: 2 }} align="center">
-                                                            Processing...
-                                                        </Typography>
+                                                <>
+                                                    <Box sx={{
+                                                        pt: '100%',
+                                                        position: 'relative',
+                                                        backgroundColor: '#f5f5f5'
+                                                    }}>
+                                                        <Box
+                                                            component="img"
+                                                            src={URL.createObjectURL(img.original)}
+                                                            alt={`Processing ${img.original.name}`}
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'contain',
+                                                                opacity: 0.3,
+                                                                filter: 'blur(2px)'
+                                                            }}
+                                                        />
+                                                        <Backdrop
+                                                            open={true}
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                                                                zIndex: 1,
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: 2
+                                                            }}
+                                                        >
+                                                            <CircularProgress size={60} thickness={4} />
+                                                            <Typography variant="body1" fontWeight="medium">
+                                                                Processing...
+                                                            </Typography>
+                                                        </Backdrop>
                                                     </Box>
-                                                </CardContent>
+                                                    <CardContent>
+                                                        <Typography variant="subtitle1" noWrap>
+                                                            {img.original.name}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            {(img.original.size / 1024 / 1024).toFixed(2)}MB
+                                                        </Typography>
+                                                    </CardContent>
+                                                </>
                                             )}
                                         </Card>
                                     </Grid>
