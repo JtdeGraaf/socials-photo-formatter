@@ -93,26 +93,14 @@ export class ImageProcessingService {
             const tempCtx = tempCanvas.getContext('2d', { alpha: false });
             if (!tempCtx) throw new Error('Cannot get temp canvas context');
 
-            // Downscale the source into a smaller temp canvas before blurring to dramatically reduce work
-            const bgScale = Math.min(1, Math.max(0.25, 1024 / canvasSize));
-            tempCanvas.width = Math.max(1, Math.round(canvas.width * bgScale));
-            tempCanvas.height = Math.max(1, Math.round(canvas.height * bgScale));
-            // Draw image to temp canvas (scaled down)
-            tempCtx.filter = 'none';
+            // Draw image to temp canvas with heavy blur
+            tempCtx.filter = 'blur(80px)';
             tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
 
-            // Apply a moderate blur on the small canvas — when scaled up this reads as a heavy blur
-            tempCtx.filter = 'blur(30px)';
-            const blurred = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            // Put the blurred data back (this forces the browser to perform the filter)
-            tempCtx.putImageData(blurred, 0, 0);
-
-            // Yield so the browser can remain responsive while we composite the blurred background
-            await new Promise((r) => setTimeout(r, 0));
-
-            // Draw the blurred, scaled-up image to main canvas
+            // Draw the blurred image to main canvas with additional blur
+            ctx.filter = 'blur(80px)';
+            ctx.drawImage(tempCanvas, 0, 0);
             ctx.filter = 'none';
-            ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
 
 
             // Add a darkening overlay for better contrast
@@ -142,19 +130,16 @@ export class ImageProcessingService {
 
             // Draw the image once to create the soft glow
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
-            await new Promise((r) => setTimeout(r, 0));
 
             // === Second layer: stronger, directional shadow underneath ===
             ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
             ctx.shadowBlur = Math.round(canvasSize * 0.02);
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
-            await new Promise((r) => setTimeout(r, 0));
 
             // 3) Gentle top-left lift (makes the top edge read more)
             ctx.shadowColor = 'rgba(0,0,0,0.18)';
             ctx.shadowBlur = Math.round(canvasSize * 0.02);
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
-            await new Promise((r) => setTimeout(r, 0));
 
             // Draw the image again to layer in the deeper shadow
             ctx.drawImage(img, xOffset, yOffset, img.width, img.height);
